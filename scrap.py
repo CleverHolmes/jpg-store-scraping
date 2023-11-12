@@ -15,6 +15,9 @@ import time
 import random
 import json
 
+
+option = Options()
+# option.add_argument('--headless')
 driver = webdriver.Chrome()
 driver.maximize_window()
 driver.get("https://www.jpg.store/marketplace?view=allCollections")
@@ -24,35 +27,43 @@ data_array = {}
 base_url = "/collection/"
 
 data_file = os.path.join(os.getcwd(), 'data.json')
+origin_file = os.path.join(os.getcwd(), 'origin.json')
 sleep(5)
 
-cnt = 0
-
+begin = 0
+count = 0
 while(True):
-    if cnt == 20:
-        cnt = 0
-        element_list = driver.find_elements(By.CSS_SELECTOR,f'a[href*="{base_url}"]')
+    sleep(5)
+    if count == 25: 
+        element_list = driver.find_elements(By.CSS_SELECTOR, f'a[href*="{base_url}"]')
 
         with open(data_file, "r") as file:
             data_array = json.load(file)
+        with open(origin_file, "r") as file:
+            origin_array = json.load(file)
 
-        for item in element_list:
-            url = item.get_attribute('href')
+        # Filter out unwanted URLs and create dictionaries
+        url = [
+            (item.get_attribute('href'), {})
+            for item in element_list[begin::2]
+            if item.get_attribute('href') != "https://www.jpg.store/collection/statistics"
+            and item.get_attribute('href') not in data_array
+        ]
 
-            if url == "https://www.jpg.store/collection/statistics":
-                continue
+        # Update data and origin arrays
+        data_array.update(dict(url))
+        origin_array.update(dict(url))
 
-            if url in data_array:
-                continue
-
-            data_array[url] = {}
-            print(url)
+        # Print results
+        print(begin, len(url))
+        begin += len(url)
 
         with open(data_file, 'w') as file:
             json.dump(data_array, file, indent=4)
-    
-    cnt = cnt + 1
-
+        with open(origin_file, 'w') as file:
+            json.dump(origin_array, file, indent=4)
+        count = 0
+    count = count + 1
     driver.execute_script(f"window.scrollBy(0, 200000);")
 
-    sleep(5)
+
